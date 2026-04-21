@@ -1,0 +1,398 @@
+/*
+ * Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.micode.notes.tool;
+
+import android.content.ContentProviderOperation;
+import android.content.ContentProviderResult;
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.OperationApplicationException;
+import android.database.Cursor;
+import android.os.RemoteException;
+import android.util.Log;
+
+import net.micode.notes.data.Notes;
+import net.micode.notes.data.Notes.CallNote;
+import net.micode.notes.data.Notes.NoteColumns;
+import net.micode.notes.ui.NotesListAdapter.AppWidgetAttribute;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+
+/**
+ * 数据操作工具类，提供对便签数据库的批量操作和常用查询方法。
+ * 所有方法均为静态方法，无需实例化即可使用。
+ */
+public class DataUtils {
+    public static final String TAG = "DataUtils"; // 日志标签
+
+    /**
+     * 批量删除指定ID集合的便签。
+     * 注意：该方法不会删除系统根文件夹（ID_ROOT_FOLDER）。
+     *
+     * @param resolver 用于访问数据库的 ContentResolver
+     * @param ids      待删除的便签ID集合
+     * @return true 表示删除成功，false 表示删除失败或参数无效
+     */
+    public static boolean batchDeleteNotes(ContentResolver resolver, HashSet<Long> ids) {
+        if (ids == null) {
+            Log.d(TAG, "the ids is null");
+            return true;
+        }
+        if (ids.size() == 0) {
+            Log.d(TAG, "no id is in the hashset");
+            return true;
+        }
+
+        // 构建批量删除操作列表
+        ArrayList<ContentProviderOperation> operationList = new ArrayList<ContentProviderOperation>();
+        for (long id : ids) {
+            // 保护系统根文件夹，避免误删
+            if(id == Notes.ID_ROOT_FOLDER) {
+                Log.e(TAG, "Don't delete system folder root");
+                continue;
+            }
+            ContentProviderOperation.Builder builder = ContentProviderOperation
+                    .newDelete(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id));
+            operationList.add(builder.build());
+        }
+
+        try {
+            // 执行批量操作
+            ContentProviderResult[] results = resolver.applyBatch(Notes.AUTHORITY, operationList);
+            if (results == null || results.length == 0 || results[0] == null) {
+                Log.d(TAG, "delete notes failed, ids:" + ids.toString());
+                return false;
+            }
+            return true;
+        } catch (RemoteException e) {
+            Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+        } catch (OperationApplicationException e) {
+            Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+        }
+        return false;
+    }
+
+    /**
+     * 将单个便签移动到指定的文件夹。
+     * 该方法会同时记录原始文件夹ID，并标记为本地已修改，以便同步。
+     *
+     * @param resolver      ContentResolver
+     * @param id            要移动的便签ID
+     * @param srcFolderId   原始文件夹ID
+     * @param desFolderId   目标文件夹ID
+     */
+    public static void moveNoteToFoler(ContentResolver resolver, long id, long srcFolderId, long desFolderId) {
+        ContentValues values = new ContentValues();
+        values.put(NoteColumns.PARENT_ID, desFolderId);
+        values.put(NoteColumns.ORIGIN_PARENT_ID, srcFolderId);
+        values.put(NoteColumns.LOCAL_MODIFIED, 1);
+        resolver.update(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id), values, null, null);
+    }
+
+    /**
+     * 批量将多个便签移动到指定文件夹。
+     *
+     * @param resolver  ContentResolver
+     * @param ids       待移动的便签ID集合
+     * @param folderId  目标文件夹ID
+     * @return true 表示移动成功，false 表示失败或参数无效
+     */
+    public static boolean batchMoveToFolder(ContentResolver resolver, HashSet<Long> ids,
+                                            long folderId) {
+        if (ids == null) {
+            Log.d(TAG, "the ids is null");
+            return true;
+        }
+
+        ArrayList<ContentProviderOperation> operationList = new ArrayList<ContentProviderOperation>();
+        for (long id : ids) {
+            ContentProviderOperation.Builder builder = ContentProviderOperation
+                    .newUpdate(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id));
+            builder.withValue(NoteColumns.PARENT_ID, folderId);
+            builder.withValue(NoteColumns.LOCAL_MODIFIED, 1);
+            operationList.add(builder.build());
+        }
+
+        try {
+            ContentProviderResult[] results = resolver.applyBatch(Notes.AUTHORITY, operationList);
+            if (results == null || results.length == 0 || results[0] == null) {
+                Log.d(TAG, "move notes failed, ids:" + ids.toString());
+                return false;
+            }
+            return true;
+        } catch (RemoteException e) {
+            Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+        } catch (OperationApplicationException e) {
+            Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+        }
+        return false;
+    }
+
+    /**
+     * 获取用户创建的文件夹数量（排除系统文件夹和回收站文件夹）。
+     *
+     * @param resolver ContentResolver
+     * @return 用户文件夹的数量
+     */
+    public static int getUserFolderCount(ContentResolver resolver) {
+        Cursor cursor = resolver.query(Notes.CONTENT_NOTE_URI,
+                new String[] { "COUNT(*)" },
+                NoteColumns.TYPE + "=? AND " + NoteColumns.PARENT_ID + "<>?",
+                new String[] { String.valueOf(Notes.TYPE_FOLDER), String.valueOf(Notes.ID_TRASH_FOLER)},
+                null);
+
+        int count = 0;
+        if(cursor != null) {
+            if(cursor.moveToFirst()) {
+                try {
+                    count = cursor.getInt(0);
+                } catch (IndexOutOfBoundsException e) {
+                    Log.e(TAG, "get folder count failed:" + e.toString());
+                } finally {
+                    cursor.close();
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 检查指定ID的便签在数据库中是否可见（未被删除到回收站且类型匹配）。
+     *
+     * @param resolver ContentResolver
+     * @param noteId   便签ID
+     * @param type     期望的便签类型（如 {@link Notes#TYPE_NOTE}）
+     * @return true 表示可见，false 表示不存在或不可见
+     */
+    public static boolean visibleInNoteDatabase(ContentResolver resolver, long noteId, int type) {
+        Cursor cursor = resolver.query(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, noteId),
+                null,
+                NoteColumns.TYPE + "=? AND " + NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER,
+                new String [] {String.valueOf(type)},
+                null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            if (cursor.getCount() > 0) {
+                exist = true;
+            }
+            cursor.close();
+        }
+        return exist;
+    }
+
+    /**
+     * 检查指定ID的便签在数据库中是否存在（不论类型和是否在回收站）。
+     *
+     * @param resolver ContentResolver
+     * @param noteId   便签ID
+     * @return true 表示存在，false 表示不存在
+     */
+    public static boolean existInNoteDatabase(ContentResolver resolver, long noteId) {
+        Cursor cursor = resolver.query(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, noteId),
+                null, null, null, null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            if (cursor.getCount() > 0) {
+                exist = true;
+            }
+            cursor.close();
+        }
+        return exist;
+    }
+
+    /**
+     * 检查指定ID的数据项在数据表中是否存在。
+     *
+     * @param resolver ContentResolver
+     * @param dataId   数据项ID
+     * @return true 表示存在，false 表示不存在
+     */
+    public static boolean existInDataDatabase(ContentResolver resolver, long dataId) {
+        Cursor cursor = resolver.query(ContentUris.withAppendedId(Notes.CONTENT_DATA_URI, dataId),
+                null, null, null, null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            if (cursor.getCount() > 0) {
+                exist = true;
+            }
+            cursor.close();
+        }
+        return exist;
+    }
+
+    /**
+     * 检查是否存在同名的可见文件夹。
+     *
+     * @param resolver ContentResolver
+     * @param name     要检查的文件夹名称
+     * @return true 表示已存在同名可见文件夹
+     */
+    public static boolean checkVisibleFolderName(ContentResolver resolver, String name) {
+        Cursor cursor = resolver.query(Notes.CONTENT_NOTE_URI, null,
+                NoteColumns.TYPE + "=" + Notes.TYPE_FOLDER +
+                        " AND " + NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER +
+                        " AND " + NoteColumns.SNIPPET + "=?",
+                new String[] { name }, null);
+        boolean exist = false;
+        if(cursor != null) {
+            if(cursor.getCount() > 0) {
+                exist = true;
+            }
+            cursor.close();
+        }
+        return exist;
+    }
+
+    /**
+     * 获取指定文件夹下所有便签的小部件属性信息。
+     * 该方法通常用于桌面小部件更新时，获取关联便签的 widgetId 和 widgetType。
+     *
+     * @param resolver  ContentResolver
+     * @param folderId  文件夹ID
+     * @return 包含小部件属性的 HashSet，如果没有则返回 null
+     */
+    public static HashSet<AppWidgetAttribute> getFolderNoteWidget(ContentResolver resolver, long folderId) {
+        Cursor c = resolver.query(Notes.CONTENT_NOTE_URI,
+                new String[] { NoteColumns.WIDGET_ID, NoteColumns.WIDGET_TYPE },
+                NoteColumns.PARENT_ID + "=?",
+                new String[] { String.valueOf(folderId) },
+                null);
+
+        HashSet<AppWidgetAttribute> set = null;
+        if (c != null) {
+            if (c.moveToFirst()) {
+                set = new HashSet<AppWidgetAttribute>();
+                do {
+                    try {
+                        AppWidgetAttribute widget = new AppWidgetAttribute();
+                        widget.widgetId = c.getInt(0);
+                        widget.widgetType = c.getInt(1);
+                        set.add(widget);
+                    } catch (IndexOutOfBoundsException e) {
+                        Log.e(TAG, e.toString());
+                    }
+                } while (c.moveToNext());
+            }
+            c.close();
+        }
+        return set;
+    }
+
+    /**
+     * 根据便签ID获取通话记录笔记中的电话号码。
+     *
+     * @param resolver ContentResolver
+     * @param noteId   便签ID
+     * @return 电话号码字符串，如果不存在则返回空字符串
+     */
+    public static String getCallNumberByNoteId(ContentResolver resolver, long noteId) {
+        Cursor cursor = resolver.query(Notes.CONTENT_DATA_URI,
+                new String [] { CallNote.PHONE_NUMBER },
+                CallNote.NOTE_ID + "=? AND " + CallNote.MIME_TYPE + "=?",
+                new String [] { String.valueOf(noteId), CallNote.CONTENT_ITEM_TYPE },
+                null);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            try {
+                return cursor.getString(0);
+            } catch (IndexOutOfBoundsException e) {
+                Log.e(TAG, "Get call number fails " + e.toString());
+            } finally {
+                cursor.close();
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 根据电话号码和通话日期查找对应的通话记录便签ID。
+     *
+     * @param resolver    ContentResolver
+     * @param phoneNumber 电话号码
+     * @param callDate    通话日期（毫秒时间戳）
+     * @return 便签ID，如果未找到则返回 0
+     */
+    public static long getNoteIdByPhoneNumberAndCallDate(ContentResolver resolver, String phoneNumber, long callDate) {
+        Cursor cursor = resolver.query(Notes.CONTENT_DATA_URI,
+                new String [] { CallNote.NOTE_ID },
+                CallNote.CALL_DATE + "=? AND " + CallNote.MIME_TYPE + "=? AND PHONE_NUMBERS_EQUAL("
+                        + CallNote.PHONE_NUMBER + ",?)",
+                new String [] { String.valueOf(callDate), CallNote.CONTENT_ITEM_TYPE, phoneNumber },
+                null);
+
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                try {
+                    return cursor.getLong(0);
+                } catch (IndexOutOfBoundsException e) {
+                    Log.e(TAG, "Get call note id fails " + e.toString());
+                }
+            }
+            cursor.close();
+        }
+        return 0;
+    }
+
+    /**
+     * 根据便签ID获取内容摘要（SNIPPET）。
+     *
+     * @param resolver ContentResolver
+     * @param noteId   便签ID
+     * @return 摘要字符串
+     * @throws IllegalArgumentException 如果便签不存在
+     */
+    public static String getSnippetById(ContentResolver resolver, long noteId) {
+        Cursor cursor = resolver.query(Notes.CONTENT_NOTE_URI,
+                new String [] { NoteColumns.SNIPPET },
+                NoteColumns.ID + "=?",
+                new String [] { String.valueOf(noteId)},
+                null);
+
+        if (cursor != null) {
+            String snippet = "";
+            if (cursor.moveToFirst()) {
+                snippet = cursor.getString(0);
+            }
+            cursor.close();
+            return snippet;
+        }
+        throw new IllegalArgumentException("Note is not found with id: " + noteId);
+    }
+
+    /**
+     * 格式化摘要文本：去除首尾空白，并截取第一个换行符之前的内容。
+     * 通常用于列表显示，避免过长的摘要内容影响UI。
+     *
+     * @param snippet 原始摘要字符串
+     * @return 格式化后的摘要
+     */
+    public static String getFormattedSnippet(String snippet) {
+        if (snippet != null) {
+            snippet = snippet.trim();
+            int index = snippet.indexOf('\n');
+            if (index != -1) {
+                snippet = snippet.substring(0, index);
+            }
+        }
+        return snippet;
+    }
+}
