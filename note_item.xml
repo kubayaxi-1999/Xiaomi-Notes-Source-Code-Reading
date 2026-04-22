@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    版权所有 (c) 2010-2011, MiCode 开源社区 (www.micode.net)
+
+    基于 Apache License, Version 2.0 许可协议授权；
+    除非遵守许可协议，否则你无权使用此文件。
+    你可以在以下网址获取许可协议副本：
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+    除非适用法律要求或书面同意，根据许可协议分发的软件均按"原样"提供，
+    不附带任何明示或默示的担保或条件。
+    请参阅许可协议了解具体语言的管理权限和限制。
+-->
+
+<!-- 笔记列表项的根布局，使用帧布局以支持叠加元素（如提醒图标） -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/note_item"               <!-- 列表项根视图ID，便于代码中查找和操作 -->
+    android:layout_width="fill_parent"         <!-- 宽度填充父容器（列表项宽度） -->
+    android:layout_height="fill_parent">       <!-- 高度填充父容器（由列表决定） -->
+
+    <!-- 主要内容区域：水平线性布局，垂直居中，包含文本信息与复选框 -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"   <!-- 在父容器中垂直居中 -->
+        android:gravity="center_vertical">         <!-- 子元素垂直居中 -->
+
+        <!-- 左侧文本信息容器，占用剩余空间，垂直方向排列 -->
+        <LinearLayout
+            android:layout_width="0dip"            <!-- 宽度由权重分配 -->
+            android:layout_height="wrap_content"
+            android:layout_weight="1"              <!-- 权重1，填满可用水平空间 -->
+            android:orientation="vertical">        <!-- 子元素垂直排列 -->
+
+            <!-- 隐藏的文本视图，可能用于显示笔记的附属信息（如文件夹名称），初始不可见 -->
+            <TextView
+                android:id="@+id/tv_name"
+                android:layout_width="wrap_content"
+                android:layout_height="0dip"
+                android:layout_weight="1"          <!-- 高度由权重决定，但此处实际效果可能因父容器wrap_content而异常，通常用于占位或动态显示 -->
+                android:textAppearance="@style/TextAppearancePrimaryItem"
+                android:visibility="gone" />       <!-- 默认隐藏 -->
+
+            <!-- 标题和时间行：水平排列，显示笔记标题与最后修改时间 -->
+            <LinearLayout
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical">
+
+                <!-- 笔记标题：占用剩余空间，单行显示，超出部分省略 -->
+                <TextView
+                    android:id="@+id/tv_title"
+                    android:layout_width="0dip"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"          <!-- 占用剩余宽度 -->
+                    android:singleLine="true" />       <!-- 单行模式，超长文本自动截断并显示省略号 -->
+
+                <!-- 笔记时间：显示最后修改时间或提醒时间，右对齐 -->
+                <TextView
+                    android:id="@+id/tv_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearanceSecondaryItem" /> <!-- 次要文本样式 -->
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 复选框：用于多选删除/移动操作，默认隐藏，在编辑模式下显示 -->
+        <CheckBox
+            android:id="@android:id/checkbox"      <!-- 使用系统内置ID，便于适配列表多选模式 -->
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:focusable="false"              <!-- 不可获取焦点，避免干扰列表项点击 -->
+            android:clickable="false"              <!-- 不可点击，由父布局处理点击事件 -->
+            android:visibility="gone" />           <!-- 默认不可见 -->
+    </LinearLayout>
+
+    <!-- 提醒图标：位于列表项右上角，当笔记设置了提醒时显示小闹钟图标 -->
+    <ImageView
+        android:id="@+id/iv_alert_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|right"/>       <!-- 相对于FrameLayout定位在右上角 -->
+</FrameLayout>
