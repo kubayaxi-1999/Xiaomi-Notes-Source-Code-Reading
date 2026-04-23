@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<!-- 线性布局，用于垂直或水平排列子视图，此处未指定方向，默认为水平 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"          <!-- 宽度填满父容器 -->
+    android:layout_height="match_parent"         <!-- 高度填满父容器 -->
+    android:minHeight="50dip" >                  <!-- 最小高度为 50 dp，确保布局至少有此高度 -->
+
+    <!-- 用于显示文件夹名称的文本视图 -->
+    <TextView
+        android:id="@+id/tv_folder_name"        <!-- 控件唯一标识符，可在代码中通过 findViewById 获取 -->
+        android:layout_width="match_parent"      <!-- 宽度填满父容器（LinearLayout） -->
+        android:layout_height="match_parent"     <!-- 高度填满父容器 -->
+        android:gravity="center"                 <!-- 文字在 TextView 内居中显示（水平+垂直） -->
+        android:textAppearance="@style/TextAppearancePrimaryItem" /> <!-- 引用样式，定义文本的字体、颜色、大小等 -->
+</LinearLayout>

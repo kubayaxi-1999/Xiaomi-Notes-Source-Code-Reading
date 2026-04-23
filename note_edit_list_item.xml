@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    版权所有 (c) 2010-2011, MiCode 开源社区 (www.micode.net)
+
+    基于 Apache License, Version 2.0 许可协议授权；
+    除非遵守许可协议，否则你无权使用此文件。
+    你可以在以下网址获取许可协议副本：
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+    除非适用法律要求或书面同意，根据许可协议分发的软件均按"原样"提供，
+    不附带任何明示或默示的担保或条件。
+    请参阅许可协议了解具体语言的管理权限和限制。
+-->
+
+<!-- 根布局：垂直线性布局（实际为水平方向，因为未设置 orientation，默认为 horizontal） -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"   <!-- 宽度填满父容器 -->
+    android:layout_height="wrap_content"> <!-- 高度根据内容自适应 -->
+
+    <!-- 复选框：用于笔记列表或编辑项的多选操作 -->
+    <CheckBox
+        android:id="@+id/cb_edit_item"          <!-- 资源ID，用于代码中获取该控件 -->
+        android:layout_width="wrap_content"      <!-- 宽度包裹内容 -->
+        android:layout_height="28dip"            <!-- 固定高度28dp，保证点击区域大小 -->
+        android:checked="false"                  <!-- 默认未选中状态 -->
+        android:focusable="false"                <!-- 不可获取焦点，避免抢占输入焦点 -->
+        android:layout_gravity="top|left" />     <!-- 对齐方式：靠左上角 -->
+
+    <!-- 自定义笔记编辑文本框：继承自 EditText，可能扩展了笔记相关的功能（如富文本、列表项处理） -->
+    <net.micode.notes.ui.NoteEditText
+        android:id="@+id/et_edit_text"               <!-- 资源ID，用于代码中获取输入内容 -->
+        android:layout_width="fill_parent"           <!-- 宽度填满剩余空间 -->
+        android:layout_height="wrap_content"         <!-- 高度根据文本内容自适应 -->
+        android:lineSpacingMultiplier="1.2"          <!-- 行间距倍数为1.2，增加可读性 -->
+        android:layout_gravity="center_vertical"     <!-- 垂直居中，与复选框对齐 -->
+        android:textAppearance="@style/TextAppearancePrimaryItem" <!-- 引用主题中定义的主文本样式 -->
+        android:background="@null" />                 <!-- 无背景，通常用于消除默认输入框下划线 -->
+</LinearLayout>

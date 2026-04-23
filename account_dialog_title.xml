@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+          http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<!-- 垂直方向的线性布局，作为对话框的主容器，宽度和高度均填满父容器 -->
+<LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical"
+        xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 对话框标题文本框：使用中等字体样式，单行显示，超出部分显示省略号，文字居中 -->
+    <TextView
+        android:id="@+id/account_dialog_title"
+        style="?android:attr/textAppearanceMedium"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:layout_marginTop="-2.7dip"
+        android:layout_marginBottom="-2.7dip"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- 对话框副标题文本框：宽度填满父容器，上下边距适当，文字居中 -->
+    <TextView
+        android:id="@+id/account_dialog_subtitle"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dip"
+        android:layout_marginBottom="1dip"
+        android:gravity="center"/>
+
+</LinearLayout>

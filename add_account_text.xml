@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- 版权声明 (c) 2010-2011, MiCode 开源社区 (www.micode.net)
+     根据 Apache License 2.0 开源协议许可 -->
+<!-- 线性布局：垂直方向排列子视图，用于显示“添加账户”提示 -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"          <!-- 宽度填满父容器 -->
+    android:layout_height="wrap_content"         <!-- 高度由内容决定 -->
+    android:minHeight="50dip"                    <!-- 最小高度 50dp -->
+    android:gravity="center_vertical"            <!-- 垂直方向居中对齐子视图 -->
+    android:orientation="vertical">              <!-- 子视图垂直排列 -->
+
+    <!-- 文本视图：居中显示“添加账户”文字 -->
+    <TextView
+        android:layout_width="wrap_content"      <!-- 宽度根据内容自适应 -->
+        android:layout_height="wrap_content"     <!-- 高度根据内容自适应 -->
+        android:layout_gravity="center"          <!-- 水平居中于父布局 -->
+        android:textAppearance="?android:attr/textAppearanceMedium" <!-- 使用中等大小文本样式 -->
+        android:text="@string/preferences_add_account" /> <!-- 显示字符串资源：preferences_add_account -->
+
+</LinearLayout>
